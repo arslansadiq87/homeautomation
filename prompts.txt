@@ -1,0 +1,271 @@
+Now we need to make the 8-channel relay board functional and connect it with our dashboard, settings, and Winbond storage.
+Keep all relay automation logic in separate files. Do not put large logic inside main.cpp.
+Create a relay automation module: relay_automation.cpp
+Also update the web UI, API routes, settings handling, and Winbond storage as required.
+Relay mapping:
+Relay 1:
+Used for Door Lock
+Add a dashboard card named “Door Lock”
+Card should have a momentary unlock/pulse button
+When clicked, relay 1 should turn ON only for a configured time, then turn OFF automatically
+Pulse time should be configurable in Settings
+Label in Settings: “Door Lock Pulse Duration”
+
+Relay 2:
+Used for Garage Door Lock
+Add a dashboard card named “Garage Door Lock”
+Card should have a momentary unlock/pulse button
+When clicked, relay 2 should turn ON only for a configured time, then turn OFF automatically
+Pulse time should be configurable in Settings
+Label in Settings: “Garage Door Lock Pulse Duration”
+
+Relay 3:
+Used for Outdoor Light
+Add a dashboard card named “Outdoor Light”
+Card must support two modes: 1. Manual 2. Automatic
+Mode should be selectable from the dashboard card and also saved in settings/state
+In Manual mode: Pressing the card/toggle should turn relay 3 ON or OFF manually
+In Automatic mode:
+  Relay 3 should turn ON/OFF according to BH1750 lux value
+  Add settings:
+  “Outdoor Light ON Below Lux”
+  “Outdoor Light OFF Above Lux”
+  If lux is below ON threshold, turn outdoor light ON
+  If lux is above OFF threshold, turn outdoor light OFF
+  Use hysteresis logic so the light does not flicker around one lux value
+  
+Relay 4 and 5: Leave reserved/spare for now and Do not add dashboard control unless needed internally
+
+Relay 6:
+Used for Exhaust Fan
+Add a dashboard card named “Exhaust Fan”
+Card must support two modes: 1. Manual 2. Automatic
+In Manual mode: Pressing the card/toggle should turn relay 6 ON or OFF manually
+In Automatic mode:
+  Relay 6 should turn ON/OFF according to indoor temperature from SHT3X
+  Add settings:
+   “Exhaust Fan ON Above Temperature”
+   “Exhaust Fan OFF Below Temperature”
+  Use hysteresis logic so the fan does not rapidly switch ON/OFF
+
+Relay 7:
+Used for PIR Motion Light 1
+Add a dashboard card named “Motion Light 1”
+Card must support two modes: 1. Manual 2. Automatic
+In Manual mode: Pressing the card/toggle should turn relay 7 ON or OFF manually
+In Automatic mode:
+  Relay 7 should turn ON when PIR Motion Sensor 1 detects motion
+  After motion is detected, keep relay 7 ON for a configured duration
+  Add setting:
+    “PIR Motion Light 1 Duration”
+	
+Relay 8:
+Used for PIR Motion Light 2
+Add a dashboard card named “Motion Light 2”
+Card must support two modes: 1. Manual 2. Automatic
+In Manual mode: Pressing the card/toggle should turn relay 8 ON or OFF manually
+In Automatic mode:
+  Relay 8 should turn ON when PIR Motion Sensor 2 detects motion
+  After motion is detected, keep relay 8 ON for a configured duration
+  Add setting:
+    “PIR Motion Light 2 Duration”
+
+Dashboard UI requirements:
+Add new cards for:
+  Door Lock
+  Garage Door Lock
+  Outdoor Light
+  Exhaust Fan
+  Light 1
+  Light 2
+Each card should show:
+  Current relay state: ON/OFF
+  Current mode where applicable: Manual/Automatic
+  Button/toggle for control
+  Clear visual state indication
+Keep the same modern dark dashboard design
+Keep UI responsive for mobile and desktop
+Continue using /api/status auto refresh every 2 seconds
+
+Settings UI requirements:
+Add settings fields for:
+Small Door Lock Pulse Duration
+Garage Door Lock Pulse Duration
+Outdoor Light ON Below Lux
+Outdoor Light OFF Above Lux
+Exhaust Fan ON Above Temperature
+Exhaust Fan OFF Below Temperature
+PIR Motion Light 1 Duration
+PIR Motion Light 2 Duration
+
+Storage requirements:
+Store all automation settings in Winbond W25Q128 flash
+Store relay modes: Manual/Automatic
+Store manual relay states where required
+After ESP32 restart, reload all saved settings, modes, and states from Winbond
+If Winbond settings are missing or invalid, load safe default values
+Add a settings structure with version/magic value for validation
+
+API requirements:
+Add or update API endpoints for:
+Getting relay states and automation modes
+Setting relay mode manual/automatic
+Manually toggling relays
+Triggering pulse unlock for relay 1 and relay 2
+Saving settings
+Loading settings from Winbond
+Returning current automation status through /api/status
+
+Safety requirements:
+On boot, relays should start in a safe OFF state first
+Then load saved settings/modes from Winbond
+Only restore manual states where it is safe
+Door lock relays must never stay ON permanently; they should always use pulse/momentary control
+Do not block the main loop with long delay() calls. Use millis()-based timing for pulse and motion duration.
+
+Final result:
+After uploading firmware, the dashboard should allow controlling door lock, garage lock, outdoor light, exhaust fan, and PIR motion lights. Automatic mode should work using BH1750 lux, SHT3X temperature, and PIR sensor values. All settings and modes should persist after restart using Winbond storage. Keep the code clean, modular, and easy to extend for the next modules.
+
+
+
+Update the RFID Tags tab and tag management system.
+Required RFID tag adding flow:
+1. In the RFID Tags tab, inside Tag Management, add an “Add Tag” button.
+2. When user clicks “Add Tag”:
+* Enter tag addition mode.
+* Show message on web UI: “Scan RFID tags to add”.
+* Show scanned tags live on the web UI as a temporary pending list.
+* User can scan one or multiple RFID tags one by one.
+* Add a “Save Tags” button to save all scanned pending tags.
+* Add a “Cancel” button to exit tag addition mode without saving.
+3. While tag addition mode is active:
+* RFID scans must NOT trigger Door Lock relay.
+* RFID scans should only be collected for adding tags.
+* Normal authorized-card unlock logic must be disabled during this mode.
+4. Add timeout for tag addition mode:
+* If user clicks “Add Tag” and does nothing, auto-exit tag addition mode after a configurable timeout, for example 30 seconds.
+* Reset/extend timeout whenever a new tag is scanned during add mode.
+* After timeout, clear pending unsaved tags and return RFID reader to normal unlock mode.
+5. Save authorized tags:
+* When user clicks “Save Tags”, save all pending scanned tags into the authorized tags list.
+* Avoid duplicate tags.
+* Store tags permanently using the existing storage method.
+* Tags must remain saved after ESP32 restart.
+6. Display saved tags:
+   At the bottom of the Tag Management card, show all saved authorized RFID tags in a table.
+Table columns:
+* #
+* Tag ID
+* Added date/time if available, otherwise show “N/A”
+* Action
+For each row, add a “Delete” button.
+When Delete is clicked:
+* Remove that tag from saved authorized tags.
+* Update storage.
+* Refresh the table.
+7. Authorized tag unlock behavior:
+   In normal mode, when an authorized RFID tag is scanned:
+* Trigger the Door Lock Relay pulse using the existing door unlock/pulse function.
+* Do not create duplicate relay logic if an existing unlock pulse function already exists.
+8. Unauthorized tag behavior:
+   If an unknown RFID tag is scanned in normal mode:
+* Do not trigger the relay.
+* Optionally show “Unauthorized tag” on the web UI/status.
+9. Prevent repeated scans:
+   The RFID reader continuously sends the same tag when the tag remains on the reader.
+   Add duplicate-scan protection:
+* If the same tag is scanned repeatedly, process it only once.
+* Do not process the same tag again until at least 2 seconds have passed.
+* This protection must apply to both normal unlock mode and tag addition mode.
+10. UI status:
+    Show clear RFID status messages:
+* “Ready”
+* “Add mode active: scan tags”
+* “Tag scanned”
+* “Tag already exists”
+* “Tags saved”
+* “Unauthorized tag”
+* “Door unlocked”
+* “Add mode timeout”
+11. Do not break existing features:
+* Existing dashboard
+* Door lock relay pulse
+* Existing RFID reading code
+* Existing settings page
+* Existing storage system
+* Existing web server structure
+12. Keep code clean:
+    Use helper functions if needed:
+* enterTagAddMode()
+* exitTagAddMode()
+* handleRfidScan(tagId)
+* addPendingTag(tagId)
+* savePendingTags()
+* deleteAuthorizedTag(tagId)
+* isAuthorizedTag(tagId)
+* triggerDoorUnlockFromRfid()
+13. Test after implementation:
+* Add Tag button enters add mode.
+* Scanned tags appear in pending list.
+* Save Tags stores them permanently.
+* Saved tags appear in table.
+* Delete button removes a tag.
+* During add mode, RFID does not unlock door.
+* Add mode auto-exits after timeout.
+* Authorized tag triggers Door Lock Relay pulse.
+* Unauthorized tag does not unlock.
+* Same tag kept on reader is processed only once every 2 seconds.
+
+also add when the card rfid card scanned buzzer should beep. 
+and also on successfull authorized card scan buzzer should beep too
+in the settings, add a toggle button to enable disable RFID door unlock.
+make sure rfid tags are being stored inside the winbond chip.
+now move the web code to winbond also, in settings also add the seed button for future webupdate in the winbond ic.
+
+in FM225 Tab, Remove the USB UVC card, also we dont need advanced card at the bottom too. 
+for enrolled users we need a list of users enrolled in tabular format.
+list user should be inside the new card above the enrollment. where proper table of enroolled users should be displayed, and with each enrolled user there should be a delete button so we can delete user directly from there.
+at the top keep only three cards, hlk-fm225, verification, and face state.
+
+in fm225 tab, when i click on verify face, after face verfication, either verified or rejected or whose face verifiedd should display in face state card, but currently there is now way to find face verification is done or not
+on successfull facial verification via radar or via verify face in fm225 tab door lock relay should turned on to unlock the door
+
+we do have a tds monitor on same network and also accessbile via mdns http://tds.local/ and aslo exposing http://tds.local/api/tds
+{"tds_ppm":309.9869,"voltage":0.841722,"age_ms":31,"uptime_ms":447617246,"temp_c":null,"temp_age_ms":null,"temp_fallback_c":25,"water_level_label":"At SW1","water_level_inches":22,"water_level_percent":100,"water_volume_liters":63.70833,"tank_height_inches":22,"tank_diameter_inches":15,"tank_capacity_liters":63.70833,"ladder_odd_voltage":1.401493,"ladder_even_voltage":0.316603,"ladder_odd_switch":1,"ladder_even_switch":0,"water_level_age_ms":93}
+now in settings add an option to enable disable monitor tds 
+if option enabled we need to provide the mdns address or we need to provide the ip address of our tds controller. 
+if the settings available then in dashboard display a card for tds monitoring
+
+
+now improve the tds monitor card on the dashboard. 
+currently tds monitor card dipslaying text lables only. 
+we need to convert it into icon style card and make it look like inverter card in back ground styling. 
+also we just need to display tds value and water level percentage. but more in graphical form instead of text labels.
+
+
+now what we need to do is, make the indore climate and ds18b20 and light level,  make one one card of all these and make them more graphical and use the same gradeint like styling in this too. 
+
+
+also for door lock and garage door lock make the gradient styling
+
+
+
+now we need to add yx5300 mp3 player settings in tab with following requirements
+we do have multip files inside the memory card which are saved inside a folder with file names in number 001, 002 and so on. 
+so what we need to do is
+add options in settings tab
+* add option for the volume of the sound module.
+* add option for enable disable startup sound and we will select the track number in here. 
+* add option to select track for smoke alarm and also add option to enable disable smoke alarm. smoke alarm will be triggered via mq135 sensor. 
+for now add these options till now. and later on we will add more options too. 
+
+now move the YX5300 MP3 Player  card from dashboard to settings menu with following addtionts. currently we have option only to play preve next pause and stop. 
+bur for now add option to enter track number and we can play specific track. also add an option to volume up and down so while playing sound from this card volume can be adjusted. volume slider should imidiately effect. 
+
+after doing this make smoke mq135 card on dashboard same like tds monitor card in styling and add icon display to give it better look. when the smoke detected this card should highlight automatically and should also trigger alarm if enabled in the settings.
+
+for the smoke alarm add a threshold value in settings, so we can sett the threshold when the alarm should trigger. 
+
+also make the smoke alarm card width to 1 card, currently its taking 2 cards width
+
+

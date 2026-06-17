@@ -1,0 +1,1200 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>ESP32 Smart Automation</title>
+    <link rel="icon" type="image/png" href="/techpanda.png">
+    <link rel="stylesheet" href="/styles.css">
+  </head>
+  <body>
+    <div class="app-shell">
+      <header class="topbar">
+        <div>
+          <p class="eyebrow">ESP32-S3 Controller</p>
+          <h1>Smart Automation</h1>
+        </div>
+        <div class="header-status">
+          <div class="system-status-bar" aria-label="Controller health">
+            <div class="system-status-item" title="IP address">
+              <svg aria-hidden="true" viewBox="0 0 24 24">
+                <path d="M12 20h.01M8.5 16.5a5 5 0 0 1 7 0M5 13a10 10 0 0 1 14 0M2 9a15 15 0 0 1 20 0" />
+              </svg>
+              <span id="ipAddress">--</span>
+            </div>
+            <div class="system-status-item" title="WiFi RSSI">
+              <svg aria-hidden="true" viewBox="0 0 24 24">
+                <path d="M3 18h3M8 14h3M13 10h3M18 6h3" />
+              </svg>
+              <span id="wifiRssi">-- dBm</span>
+            </div>
+            <div class="system-status-item" title="Free heap">
+              <svg aria-hidden="true" viewBox="0 0 24 24">
+                <rect x="5" y="5" width="14" height="14" rx="2" />
+                <path d="M9 1v4M15 1v4M9 19v4M15 19v4M1 9h4M1 15h4M19 9h4M19 15h4" />
+              </svg>
+              <span id="freeHeap">-- KB</span>
+            </div>
+            <div class="system-status-item" title="Uptime">
+              <svg aria-hidden="true" viewBox="0 0 24 24">
+                <circle cx="12" cy="12" r="8" />
+                <path d="M12 8v5l3 2" />
+              </svg>
+              <span id="uptime">--</span>
+            </div>
+          </div>
+          <div class="status-pill" id="connectionStatus">
+            <span class="dot"></span>
+            <span id="connectionLabel">Connecting</span>
+          </div>
+        </div>
+      </header>
+
+      <nav class="tabs" aria-label="Main navigation">
+        <button class="tab active" data-tab="dashboard" type="button">
+          Dashboard
+        </button>
+        <button class="tab" data-tab="settings" type="button">
+          Settings
+        </button>
+        <button class="tab" data-tab="radar" type="button">
+          Radar
+        </button>
+        <button class="tab" data-tab="fm225" type="button">
+          FM225
+        </button>
+        <button class="tab" data-tab="rfid" type="button">
+          RFID
+        </button>
+      </nav>
+
+      <main>
+        <section class="tab-panel active" id="dashboardPanel">
+          <div class="dashboard-grid">
+            <article class="metric-card inverter-card climate-card indoor-climate-card" id="climateSensorCard">
+              <div class="inverter-title">
+                <strong>Indoor Climate</strong>
+                <span id="climateStatus">Waiting</span>
+              </div>
+              <div class="climate-visuals indoor-visuals">
+                <div class="climate-orb" id="climateGauge" role="meter" aria-label="Indoor humidity" aria-valuemin="0" aria-valuemax="100">
+                  <svg class="climate-icon" viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M14 4a2 2 0 0 0-4 0v8.3a4.5 4.5 0 1 0 4 0V4Z"></path>
+                    <path d="M12 15v3"></path>
+                  </svg>
+                  <strong id="temperature">--.- C</strong>
+                  <span id="humidity">--% RH</span>
+                </div>
+              </div>
+            </article>
+
+            <article class="metric-card inverter-card climate-card outdoor-climate-card" id="outdoorClimateCard">
+              <div class="inverter-title">
+                <strong>Outdoor Climate</strong>
+                <span id="outdoorClimateStatus">Waiting</span>
+              </div>
+              <div class="climate-visuals outdoor-visuals">
+                <div class="climate-orb outdoor-temp-orb" id="outdoorTempGauge" role="meter" aria-label="Outdoor temperature" aria-valuemin="-10" aria-valuemax="60">
+                  <svg class="climate-icon" viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M10 5a2 2 0 0 1 4 0v8.5a4 4 0 1 1-4 0V5Z"></path>
+                    <path d="M12 17v1"></path>
+                  </svg>
+                  <strong id="ds18b20Temperature">--.- C</strong>
+                </div>
+                <div class="climate-orb light-orb" id="lightGauge" role="meter" aria-label="Outdoor light level" aria-valuemin="0" aria-valuemax="1000">
+                  <svg class="climate-icon" viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M12 3v2"></path>
+                    <path d="M12 19v2"></path>
+                    <path d="m4.9 4.9 1.4 1.4"></path>
+                    <path d="m17.7 17.7 1.4 1.4"></path>
+                    <path d="M3 12h2"></path>
+                    <path d="M19 12h2"></path>
+                    <path d="m4.9 19.1 1.4-1.4"></path>
+                    <path d="m17.7 6.3 1.4-1.4"></path>
+                    <path d="M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8Z"></path>
+                  </svg>
+                  <strong id="lux">-- lx</strong>
+                </div>
+              </div>
+            </article>
+
+            <article class="metric-card relay-card lock-card" data-lock-endpoint="door/pulse" id="doorLockCard">
+              <div class="card-meta">
+                <span>Door Lock</span>
+                <strong id="doorLockState">OFF</strong>
+              </div>
+              <p class="door-status" id="doorReedStatus">Door --</p>
+            </article>
+
+            <article class="metric-card relay-card lock-card" data-lock-endpoint="garage/pulse" id="garageLockCard">
+              <div class="card-meta">
+                <span>Garage Door Lock</span>
+                <strong id="garageLockState">OFF</strong>
+              </div>
+              <p class="door-status" id="garageReedStatus">Door --</p>
+            </article>
+
+            <article class="metric-card inverter-card" id="nitroxInverterCard">
+              <div class="inverter-title">
+                <strong>Nitrox</strong>
+                <span id="nitroxInverterStatus">Waiting</span>
+              </div>
+              <div class="power-flow">
+                <svg class="flow-lines" viewBox="0 0 360 270" preserveAspectRatio="none" aria-hidden="true">
+                  <path class="flow-path solar-path" id="nitroxPvInverterPath" d="M180 76 C180 88 180 100 180 107"></path>
+                  <path class="flow-path grid-path" id="nitroxGridInverterPath" d="M78 141 C104 141 126 141 146 141"></path>
+                  <path class="flow-path inverter-home-path" id="nitroxInverterHomePath" d="M214 141 C236 141 258 141 282 141"></path>
+                  <path class="flow-path battery-inverter-path" id="nitroxBatteryInverterPath" d="M180 198 C180 190 180 183 180 175"></path>
+                  <circle class="flow-dot solar-dot" id="nitroxPvInverterDot" r="4">
+                    <animateMotion dur="2s" repeatCount="indefinite" calcMode="linear" keyPoints="0;1" keyTimes="0;1">
+                      <mpath href="#nitroxPvInverterPath"></mpath>
+                    </animateMotion>
+                  </circle>
+                  <circle class="flow-dot grid-dot" id="nitroxGridInverterDot" r="4">
+                    <animateMotion dur="2s" repeatCount="indefinite" calcMode="linear" keyPoints="0;1" keyTimes="0;1">
+                      <mpath href="#nitroxGridInverterPath"></mpath>
+                    </animateMotion>
+                  </circle>
+                  <circle class="flow-dot home-dot" id="nitroxInverterHomeDot" r="4">
+                    <animateMotion dur="2s" repeatCount="indefinite" calcMode="linear" keyPoints="0;1" keyTimes="0;1">
+                      <mpath href="#nitroxInverterHomePath"></mpath>
+                    </animateMotion>
+                  </circle>
+                  <circle class="flow-dot battery-dot" id="nitroxBatteryInverterDot" r="4">
+                    <animateMotion dur="2s" repeatCount="indefinite" calcMode="linear" keyPoints="0;1" keyTimes="0;1">
+                      <mpath href="#nitroxBatteryInverterPath"></mpath>
+                    </animateMotion>
+                  </circle>
+                </svg>
+                <div class="flow-node solar-node">
+                  <svg class="flow-node-icon" viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M4 6h16"></path>
+                    <path d="M4 10h16"></path>
+                    <path d="M7 14h10"></path>
+                    <path d="M9 18h6"></path>
+                    <path d="M8 6 6 18"></path>
+                    <path d="m16 6 2 12"></path>
+                  </svg>
+                  <span>Nitrox PV Power</span>
+                  <strong id="nitroxPvPower">-- W</strong>
+                </div>
+                <div class="flow-node grid-node">
+                  <svg class="flow-node-icon" viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M4 20h16"></path>
+                    <path d="M7 20V9"></path>
+                    <path d="M17 20V9"></path>
+                    <path d="M6 9h12l-6-5-6 5Z"></path>
+                    <path d="M9 13h6"></path>
+                    <path d="M9 16h6"></path>
+                  </svg>
+                  <strong id="nitroxGridVoltage">-- V</strong>
+                  <span id="nitroxGridPower">-- W</span>
+                  <small>Grid</small>
+                </div>
+                <div class="flow-node inverter-node">
+                  <svg class="flow-node-icon" viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M6 5h12v14H6z"></path>
+                    <path d="M9 9h6"></path>
+                    <path d="M9 13h2"></path>
+                    <path d="M14 13h1"></path>
+                    <path d="M9 17h6"></path>
+                  </svg>
+                  <strong>Inverter</strong>
+                </div>
+                <div class="flow-node home-node">
+                  <svg class="flow-node-icon" viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="m4 11 8-7 8 7"></path>
+                    <path d="M6 10v10h12V10"></path>
+                    <path d="M10 20v-6h4v6"></path>
+                  </svg>
+                  <strong id="nitroxHomePower">-- W</strong>
+                  <span id="nitroxHomeImport">-- W</span>
+                  <small>Home</small>
+                </div>
+                <div class="flow-node battery-node">
+                  <svg class="flow-node-icon" viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M7 7h10v12H7z"></path>
+                    <path d="M10 4h4v3h-4z"></path>
+                    <path d="M10 13h4"></path>
+                    <path d="M12 11v4"></path>
+                  </svg>
+                  <strong id="nitroxBatterySoc">--%</strong>
+                  <span id="nitroxBatteryPower">-- W</span>
+                  <small>Battery</small>
+                </div>
+              </div>
+            </article>
+
+            <article class="metric-card inverter-card" id="solaxInverterCard">
+              <div class="inverter-title">
+                <strong>Solax</strong>
+                <span id="solaxInverterStatus">Waiting</span>
+              </div>
+              <div class="power-flow">
+                <svg class="flow-lines" viewBox="0 0 360 270" preserveAspectRatio="none" aria-hidden="true">
+                  <path class="flow-path solar-path" id="solaxPvInverterPath" d="M180 76 C180 88 180 100 180 107"></path>
+                  <path class="flow-path grid-path" id="solaxGridInverterPath" d="M78 141 C104 141 126 141 146 141"></path>
+                  <path class="flow-path inverter-home-path" id="solaxInverterHomePath" d="M214 141 C236 141 258 141 282 141"></path>
+                  <path class="flow-path battery-inverter-path" id="solaxBatteryInverterPath" d="M180 198 C180 190 180 183 180 175"></path>
+                  <circle class="flow-dot solar-dot" id="solaxPvInverterDot" r="4">
+                    <animateMotion dur="2s" repeatCount="indefinite" calcMode="linear" keyPoints="0;1" keyTimes="0;1">
+                      <mpath href="#solaxPvInverterPath"></mpath>
+                    </animateMotion>
+                  </circle>
+                  <circle class="flow-dot grid-dot" id="solaxGridInverterDot" r="4">
+                    <animateMotion dur="2s" repeatCount="indefinite" calcMode="linear" keyPoints="0;1" keyTimes="0;1">
+                      <mpath href="#solaxGridInverterPath"></mpath>
+                    </animateMotion>
+                  </circle>
+                  <circle class="flow-dot home-dot" id="solaxInverterHomeDot" r="4">
+                    <animateMotion dur="2s" repeatCount="indefinite" calcMode="linear" keyPoints="0;1" keyTimes="0;1">
+                      <mpath href="#solaxInverterHomePath"></mpath>
+                    </animateMotion>
+                  </circle>
+                  <circle class="flow-dot battery-dot" id="solaxBatteryInverterDot" r="4">
+                    <animateMotion dur="2s" repeatCount="indefinite" calcMode="linear" keyPoints="0;1" keyTimes="0;1">
+                      <mpath href="#solaxBatteryInverterPath"></mpath>
+                    </animateMotion>
+                  </circle>
+                </svg>
+                <div class="flow-node solar-node">
+                  <svg class="flow-node-icon" viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M4 6h16"></path>
+                    <path d="M4 10h16"></path>
+                    <path d="M7 14h10"></path>
+                    <path d="M9 18h6"></path>
+                    <path d="M8 6 6 18"></path>
+                    <path d="m16 6 2 12"></path>
+                  </svg>
+                  <span>Solax PV Power</span>
+                  <strong id="solaxPvPower">-- W</strong>
+                </div>
+                <div class="flow-node grid-node">
+                  <svg class="flow-node-icon" viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M4 20h16"></path>
+                    <path d="M7 20V9"></path>
+                    <path d="M17 20V9"></path>
+                    <path d="M6 9h12l-6-5-6 5Z"></path>
+                    <path d="M9 13h6"></path>
+                    <path d="M9 16h6"></path>
+                  </svg>
+                  <strong id="solaxGridVoltage">-- V</strong>
+                  <span id="solaxGridPower">-- W</span>
+                  <small>Grid</small>
+                </div>
+                <div class="flow-node inverter-node">
+                  <svg class="flow-node-icon" viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M6 5h12v14H6z"></path>
+                    <path d="M9 9h6"></path>
+                    <path d="M9 13h2"></path>
+                    <path d="M14 13h1"></path>
+                    <path d="M9 17h6"></path>
+                  </svg>
+                  <strong>Inverter</strong>
+                </div>
+                <div class="flow-node home-node">
+                  <svg class="flow-node-icon" viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="m4 11 8-7 8 7"></path>
+                    <path d="M6 10v10h12V10"></path>
+                    <path d="M10 20v-6h4v6"></path>
+                  </svg>
+                  <strong id="solaxHomePower">-- W</strong>
+                  <span id="solaxHomeImport">-- W</span>
+                  <small>Home</small>
+                </div>
+                <div class="flow-node battery-node">
+                  <svg class="flow-node-icon" viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M7 7h10v12H7z"></path>
+                    <path d="M10 4h4v3h-4z"></path>
+                    <path d="M10 13h4"></path>
+                    <path d="M12 11v4"></path>
+                  </svg>
+                  <strong id="solaxBatterySoc">--%</strong>
+                  <span id="solaxBatteryPower">-- W</span>
+                  <small>Battery</small>
+                </div>
+              </div>
+            </article>
+
+            <article class="metric-card inverter-card growatt-card" id="growattInverterCard">
+              <div class="inverter-title">
+                <strong>Growatt</strong>
+                <span id="growattInverterStatus">Waiting</span>
+              </div>
+              <div class="growatt-flow">
+                <svg class="growatt-lines" viewBox="0 0 720 92" preserveAspectRatio="none" aria-hidden="true">
+                  <path class="growatt-export-path" d="M150 46 C270 46 450 46 570 46"></path>
+                </svg>
+                <div class="growatt-node growatt-pv-node">
+                  <span>PV Power</span>
+                  <strong id="growattPvPower">-- W</strong>
+                </div>
+                <div class="growatt-flow-label">
+                  <strong id="growattGridPower">-- W</strong>
+                  <span>Export to Grid</span>
+                </div>
+                <div class="growatt-node growatt-grid-node">
+                  <span>Grid</span>
+                  <strong id="growattGridVoltage">On Grid</strong>
+                </div>
+                <div class="growatt-energy">
+                  <div>
+                    <span>Today</span>
+                    <strong id="growattTodayEnergy">-- kWh</strong>
+                  </div>
+                  <div>
+                    <span>Total</span>
+                    <strong id="growattTotalEnergy">-- kWh</strong>
+                  </div>
+                </div>
+              </div>
+            </article>
+
+            <article class="metric-card relay-card manual-relay-card" data-device="outdoorLight" id="outdoorLightCard">
+              <div class="card-meta">
+                <span>Outdoor Light</span>
+                <strong id="outdoorLightState">OFF</strong>
+              </div>
+              <p id="outdoorLightStatus">Manual mode</p>
+              <div class="relay-controls mode-toggle" role="group" aria-label="Outdoor Light mode">
+                <button class="automation-mode-option" data-device="outdoorLight" data-mode="manual" type="button" aria-pressed="true">Manual</button>
+                <button class="automation-mode-option" data-device="outdoorLight" data-mode="automatic" type="button" aria-pressed="false">Automatic</button>
+              </div>
+            </article>
+
+            <article class="metric-card relay-card manual-relay-card" data-device="exhaustFan" id="exhaustFanCard">
+              <div class="card-meta">
+                <span>Exhaust Fan</span>
+                <strong id="exhaustFanState">OFF</strong>
+              </div>
+              <p id="exhaustFanStatus">Manual mode</p>
+              <div class="relay-controls mode-toggle" role="group" aria-label="Exhaust Fan mode">
+                <button class="automation-mode-option" data-device="exhaustFan" data-mode="manual" type="button" aria-pressed="true">Manual</button>
+                <button class="automation-mode-option" data-device="exhaustFan" data-mode="automatic" type="button" aria-pressed="false">Automatic</button>
+              </div>
+            </article>
+
+            <article class="metric-card relay-card manual-relay-card" data-device="motionLight1" id="motionLight1Card">
+              <div class="card-meta">
+                <span>Motion Light 1</span>
+                <strong id="motionLight1State">OFF</strong>
+              </div>
+              <p id="motionLight1Status">Manual mode</p>
+              <div class="relay-controls mode-toggle" role="group" aria-label="Motion Light 1 mode">
+                <button class="automation-mode-option" data-device="motionLight1" data-mode="manual" type="button" aria-pressed="true">Manual</button>
+                <button class="automation-mode-option" data-device="motionLight1" data-mode="automatic" type="button" aria-pressed="false">Automatic</button>
+              </div>
+            </article>
+
+            <article class="metric-card relay-card manual-relay-card" data-device="motionLight2" id="motionLight2Card">
+              <div class="card-meta">
+                <span>Motion Light 2</span>
+                <strong id="motionLight2State">OFF</strong>
+              </div>
+              <p id="motionLight2Status">Manual mode</p>
+              <div class="relay-controls mode-toggle" role="group" aria-label="Motion Light 2 mode">
+                <button class="automation-mode-option" data-device="motionLight2" data-mode="manual" type="button" aria-pressed="true">Manual</button>
+                <button class="automation-mode-option" data-device="motionLight2" data-mode="automatic" type="button" aria-pressed="false">Automatic</button>
+              </div>
+            </article>
+
+            <article class="metric-card inverter-card smoke-card" id="mq135Card">
+              <div class="inverter-title">
+                <strong>Smoke Monitor</strong>
+                <span id="mq135Status">Waiting</span>
+              </div>
+              <div class="smoke-visuals">
+                <div class="smoke-icon-node" aria-hidden="true">
+                  <svg class="smoke-icon" viewBox="0 0 24 24">
+                    <path d="M8.6 20.5c-1.9-.9-3.1-2.4-3.1-4.2 0-2.2 1.8-3.4 3.2-4.5 1.1-.9 2-1.6 2-2.8 0-1-.5-1.9-1.4-2.7 3.4.7 5.9 3.4 5.9 6.4 0 1.3-.5 2.4-1.2 3.4"></path>
+                    <path d="M14 20.5c2.4-.8 4-2.5 4-4.6 0-1.4-.7-2.6-1.8-3.7"></path>
+                    <path d="M9 17.2c1.8-.6 3.2-.6 5 0"></path>
+                  </svg>
+                </div>
+                <div class="smoke-reading">
+                  <strong id="mq135State">--</strong>
+                  <span id="mq135Reading">MQ-135 waiting for data</span>
+                </div>
+              </div>
+            </article>
+
+            <article class="metric-card inverter-card tds-monitor-card hidden" id="tdsMonitorCard">
+              <div class="inverter-title">
+                <strong>TDS Monitor</strong>
+                <span id="tdsMonitorStatus">Disabled</span>
+              </div>
+              <div class="tds-visuals">
+                <div class="tds-ring" id="tdsGauge" role="meter" aria-label="TDS value" aria-valuemin="0" aria-valuemax="1000">
+                  <div class="tds-ring-core">
+                    <svg class="tds-metric-icon" viewBox="0 0 24 24" aria-hidden="true">
+                      <path d="M12 3.6c2.9 3.2 5.4 6.4 5.4 9.2a5.4 5.4 0 0 1-10.8 0c0-2.8 2.5-6 5.4-9.2Z"></path>
+                      <path d="M9.2 13.4c.4 1.7 1.4 2.6 2.9 2.8"></path>
+                    </svg>
+                    <strong id="tdsPpm">--</strong>
+                    <span>ppm</span>
+                  </div>
+                </div>
+                <div class="tds-tank" id="tdsWaterGauge" role="meter" aria-label="Water level" aria-valuemin="0" aria-valuemax="100">
+                  <div class="tds-tank-fill"></div>
+                  <svg class="tds-metric-icon" viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M4 14.2c1.8-1.5 3.7-1.5 5.5 0s3.7 1.5 5.5 0 3.7-1.5 5.5 0"></path>
+                    <path d="M4 18.2c1.8-1.5 3.7-1.5 5.5 0s3.7 1.5 5.5 0 3.7-1.5 5.5 0"></path>
+                    <path d="M7 5h10l-1 16H8L7 5Z"></path>
+                  </svg>
+                  <strong id="tdsWaterLevel">--%</strong>
+                </div>
+              </div>
+            </article>
+
+          </div>
+        </section>
+
+        <section class="tab-panel" id="settingsPanel">
+          <form class="settings-card" id="settingsForm">
+            <div class="settings-subtabs" aria-label="Settings sections">
+              <button class="settings-subtab active" data-settings-tab="about" type="button">About</button>
+              <button class="settings-subtab" data-settings-tab="access" type="button">Access</button>
+              <button class="settings-subtab" data-settings-tab="sound" type="button">Sound</button>
+              <button class="settings-subtab" data-settings-tab="tds" type="button">TDS</button>
+              <button class="settings-subtab" data-settings-tab="inverters" type="button">Inverters</button>
+              <button class="settings-subtab" data-settings-tab="relays" type="button">Relays</button>
+              <button class="settings-subtab" data-settings-tab="network" type="button">Network</button>
+              <button class="settings-subtab" data-settings-tab="security" type="button">Security</button>
+              <button class="settings-subtab" data-settings-tab="logs" type="button">Logs</button>
+            </div>
+
+            <section class="settings-subpanel active" data-settings-panel="about">
+              <div class="settings-brand-card">
+                <div class="brand-lockup">
+                  <img src="/techpanda.png" alt="TechPanda Smart Automation">
+                  <div>
+                    <p class="eyebrow">TechPanda</p>
+                    <h2>TechPanda Smart Automation</h2>
+                    <span>ESP32-S3 dashboard, storage, sensors, relays, inverters, access, and sound module control.</span>
+                  </div>
+                </div>
+                <button class="icon-action restart-action" id="restartDeviceButton" type="button">Restart Controller</button>
+              </div>
+
+              <div class="settings-grid compact">
+              </div>
+
+            <div class="settings-section compact-storage-heading">
+              <div>
+                <p class="eyebrow">Winbond IC Storage</p>
+                <h2>Storage Status</h2>
+              </div>
+              <button class="primary-action web-storage-action compact-seed-action" data-action="seed" id="webStorageSeedButton" type="button">Seed Files</button>
+            </div>
+
+            <div class="health-grid settings-status-grid">
+              <div>
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M4 7c0-2 3.6-3.5 8-3.5S20 5 20 7s-3.6 3.5-8 3.5S4 9 4 7Z"></path>
+                  <path d="M4 7v5c0 2 3.6 3.5 8 3.5s8-1.5 8-3.5V7"></path>
+                  <path d="M4 12v5c0 2 3.6 3.5 8 3.5s8-1.5 8-3.5v-5"></path>
+                </svg>
+                <span>Status</span>
+                <strong id="storageSettingsState">--</strong>
+              </div>
+              <div>
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M5 12h14"></path>
+                  <path d="M12 5v14"></path>
+                  <path d="M4 4h16v16H4z"></path>
+                </svg>
+                <span>Available</span>
+                <strong id="storageSettingsAvailable">--</strong>
+              </div>
+              <div>
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M4 4h16v16H4z"></path>
+                  <path d="M8 8h8v8H8z"></path>
+                </svg>
+                <span>Total</span>
+                <strong id="storageSettingsTotal">--</strong>
+              </div>
+              <div>
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M8 3v4"></path>
+                  <path d="M16 3v4"></path>
+                  <path d="M8 17v4"></path>
+                  <path d="M16 17v4"></path>
+                  <path d="M3 8h4"></path>
+                  <path d="M17 8h4"></path>
+                  <path d="M3 16h4"></path>
+                  <path d="M17 16h4"></path>
+                  <path d="M7 7h10v10H7z"></path>
+                </svg>
+                <span>JEDEC ID</span>
+                <strong id="storageSettingsJedec">--</strong>
+              </div>
+              <div>
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M4 5h6l2 2h8v12H4z"></path>
+                  <path d="M8 12h8"></path>
+                  <path d="M8 15h5"></path>
+                </svg>
+                <span>Web Files</span>
+                <strong id="webStorageSettingsState">--</strong>
+              </div>
+              <div>
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M20 6 9 17l-5-5"></path>
+                </svg>
+                <span>Seed Status</span>
+                <strong id="webStorageSettingsEvent">--</strong>
+              </div>
+            </div>
+            </section>
+
+            <section class="settings-subpanel" data-settings-panel="access">
+            <div class="settings-section settings-heading">
+              <div>
+                <p class="eyebrow">FM225 Radar Presence Activation</p>
+                <h2>Presence Gate</h2>
+              </div>
+            </div>
+
+            <label class="toggle-row">
+              <span>
+                Enable Radar Presence Detection for FM225
+                <small>Only start FM225 verification when radar presence meets the thresholds.</small>
+              </span>
+              <input id="fm225RadarPresenceEnabledInput" name="fm225RadarPresenceEnabled" type="checkbox">
+            </label>
+
+            <div class="control-grid settings-grid">
+              <label>
+                Presence Distance Limit
+                <input id="fm225RadarMinDistanceCmInput" name="fm225RadarMinDistanceCm" type="number" min="0" max="1000" step="1">
+              </label>
+              <label>
+                Minimum Presence Energy
+                <input id="fm225RadarMinEnergyInput" name="fm225RadarMinEnergy" type="number" min="0" max="100" step="1">
+              </label>
+            </div>
+
+            <label class="toggle-row">
+              <span>
+                RFID Door Unlock
+                <small>Allow authorized RFID tags to pulse the door lock.</small>
+              </span>
+              <input id="rfidDoorUnlockEnabledInput" name="rfidDoorUnlockEnabled" type="checkbox">
+            </label>
+            </section>
+
+            <section class="settings-subpanel" data-settings-panel="sound">
+            <div class="settings-section settings-heading">
+              <div>
+                <p class="eyebrow">YX5300 MP3 Player</p>
+                <h2>Sound Module</h2>
+              </div>
+            </div>
+
+            <article class="metric-card player-card settings-player-card">
+              <div class="card-meta">
+                <span>YX5300 MP3 Player</span>
+                <strong id="mp3PlayerState">Idle</strong>
+              </div>
+              <p id="mp3CurrentTrack">Folder 1, track -- / 255</p>
+              <div class="player-track-row">
+                <label>
+                  Track Number
+                  <input id="mp3TrackInput" name="mp3Track" type="number" min="1" max="255" step="1" value="1">
+                </label>
+                <button class="icon-action primary mp3-action" data-action="file" type="button">Play Track</button>
+              </div>
+              <label class="range-row mp3-volume-row">
+                <span>Player Volume</span>
+                <input id="mp3LiveVolumeInput" name="mp3LiveVolume" type="range" min="0" max="30" step="1" value="25">
+                <output id="mp3LiveVolumeValue">25</output>
+              </label>
+              <div class="player-controls" aria-label="MP3 controls">
+                <button class="icon-action mp3-action" data-action="previous" type="button" title="Previous track" aria-label="Previous track">Prev</button>
+                <button class="icon-action mp3-action primary" data-action="play" type="button" title="Play from first track" aria-label="Play from first track">Play</button>
+                <button class="icon-action mp3-action" data-action="next" type="button" title="Next track" aria-label="Next track">Next</button>
+              </div>
+              <div class="player-controls secondary-controls" aria-label="MP3 secondary controls">
+                <button class="icon-action mp3-action" data-action="pause" type="button" title="Pause playback" aria-label="Pause playback">Pause</button>
+                <button class="icon-action mp3-action" data-action="stop" type="button" title="Stop playback" aria-label="Stop playback">Stop</button>
+              </div>
+            </article>
+
+            <div class="control-grid settings-grid">
+              <label>
+                Module Volume
+                <input id="mp3VolumeInput" name="mp3Volume" type="number" min="0" max="30" step="1">
+              </label>
+              <label>
+                Startup Track Number
+                <input id="mp3StartupTrackInput" name="mp3StartupTrack" type="number" min="1" max="255" step="1">
+              </label>
+              <label>
+                Smoke Alarm Track Number
+                <input id="mp3SmokeAlarmTrackInput" name="mp3SmokeAlarmTrack" type="number" min="1" max="255" step="1">
+              </label>
+              <label>
+                Smoke Alarm Threshold
+                <input id="mp3SmokeAlarmThresholdRawInput" name="mp3SmokeAlarmThresholdRaw" type="number" min="0" max="4095" step="1">
+              </label>
+            </div>
+
+            <label class="toggle-row">
+              <span>
+                Enable Startup Sound
+                <small>Play the selected numbered track after the sound module is initialized.</small>
+              </span>
+              <input id="mp3StartupSoundEnabledInput" name="mp3StartupSoundEnabled" type="checkbox">
+            </label>
+
+            <label class="toggle-row">
+              <span>
+                Enable Smoke Alarm Sound
+                <small>Play the selected numbered track when MQ-135 smoke alert becomes active.</small>
+              </span>
+              <input id="mp3SmokeAlarmEnabledInput" name="mp3SmokeAlarmEnabled" type="checkbox">
+            </label>
+            </section>
+
+            <section class="settings-subpanel" data-settings-panel="tds">
+            <div class="settings-section settings-heading">
+              <div>
+                <p class="eyebrow">TDS Water Monitor</p>
+                <h2>TDS Controller</h2>
+              </div>
+            </div>
+
+            <label class="toggle-row">
+              <span>
+                Enable TDS Monitor
+                <small>Poll the TDS controller and show water quality on the dashboard.</small>
+              </span>
+              <input id="tdsMonitorEnabledInput" name="tdsMonitorEnabled" type="checkbox">
+            </label>
+
+            <label>
+              TDS Controller Address
+              <input id="tdsMonitorAddressInput" name="tdsMonitorAddress" type="text" value="http://tds.local/api/tds" autocomplete="off">
+            </label>
+            </section>
+
+            <section class="settings-subpanel" data-settings-panel="inverters">
+            <div class="settings-section settings-heading">
+              <div>
+                <p class="eyebrow">Solar Inverters</p>
+                <h2>Inverter Monitors</h2>
+              </div>
+            </div>
+
+            <label class="toggle-row">
+              <span>
+                Enable SolaX Monitor
+                <small>Poll the SolaX inverter and show it on the dashboard.</small>
+              </span>
+              <input id="solaxEnabledInput" name="solaxEnabled" type="checkbox">
+            </label>
+
+            <div class="control-grid settings-grid">
+              <label>
+                SolaX Address
+                <input id="solaxAddressInput" name="solaxAddress" type="text" value="http://192.168.100.23/" autocomplete="off">
+              </label>
+              <label>
+                SolaX Password
+                <input id="solaxPasswordInput" name="solaxPassword" type="text" autocomplete="off">
+              </label>
+              <label>
+                SolaX Update Interval
+                <input id="solaxIntervalSecondsInput" name="solaxIntervalSeconds" type="number" min="5" max="300" step="1">
+              </label>
+            </div>
+
+            <label class="toggle-row">
+              <span>
+                Enable Nitrox Monitor
+                <small>Poll the Nitrox/Deye inverter and show it on the dashboard.</small>
+              </span>
+              <input id="nitroxEnabledInput" name="nitroxEnabled" type="checkbox">
+            </label>
+
+            <div class="control-grid settings-grid">
+              <label>
+                Nitrox Host / IP
+                <input id="nitroxHostInput" name="nitroxHost" type="text" value="192.168.100.121" autocomplete="off">
+              </label>
+              <label>
+                Nitrox Port
+                <input id="nitroxPortInput" name="nitroxPort" type="number" min="1" max="65535" step="1">
+              </label>
+              <label>
+                Nitrox Logger Serial
+                <input id="nitroxLoggerSerialInput" name="nitroxLoggerSerial" type="number" min="1" max="2147483647" step="1">
+              </label>
+              <label>
+                Nitrox Slave ID
+                <input id="nitroxSlaveIdInput" name="nitroxSlaveId" type="number" min="1" max="247" step="1">
+              </label>
+              <label>
+                Nitrox Update Interval
+                <input id="nitroxIntervalSecondsInput" name="nitroxIntervalSeconds" type="number" min="5" max="300" step="1">
+              </label>
+            </div>
+
+            <label class="toggle-row">
+              <span>
+                Enable Growatt Monitor
+                <small>Poll Growatt OpenAPI cloud data and show it on the dashboard.</small>
+              </span>
+              <input id="growattEnabledInput" name="growattEnabled" type="checkbox">
+            </label>
+
+            <div class="control-grid settings-grid">
+              <label>
+                Growatt API Base URL
+                <input id="growattBaseUrlInput" name="growattBaseUrl" type="text" value="https://openapi.growatt.com/v1/" autocomplete="off">
+              </label>
+              <label>
+                Growatt API Token
+                <input id="growattTokenInput" name="growattToken" type="password" autocomplete="off">
+              </label>
+              <label>
+                Growatt Plant ID
+                <input id="growattPlantIdInput" name="growattPlantId" type="number" min="0" max="2147483647" step="1">
+              </label>
+              <label>
+                Growatt Update Interval
+                <input id="growattIntervalSecondsInput" name="growattIntervalSeconds" type="number" min="60" max="3600" step="1">
+              </label>
+            </div>
+            </section>
+
+            <section class="settings-subpanel" data-settings-panel="relays">
+            <div class="settings-section settings-heading">
+              <div>
+                <p class="eyebrow">Relay Automation</p>
+                <h2>Relay Settings</h2>
+              </div>
+            </div>
+
+            <label>
+              Small Door Lock Pulse Duration
+              <input id="doorLockPulseMsInput" name="doorLockPulseMs" type="number" min="100" max="30000" step="100">
+            </label>
+
+            <label>
+              Garage Door Lock Pulse Duration
+              <input id="garageLockPulseMsInput" name="garageLockPulseMs" type="number" min="100" max="30000" step="100">
+            </label>
+
+            <div class="control-grid settings-grid">
+              <label>
+                Outdoor Light Mode
+                <select id="outdoorLightModeInput" name="outdoorLightMode">
+                  <option value="manual">Manual</option>
+                  <option value="automatic">Automatic</option>
+                </select>
+              </label>
+              <label>
+                Outdoor Light ON Below Lux
+                <input id="outdoorLightOnBelowLuxInput" name="outdoorLightOnBelowLux" type="number" min="0" max="100000" step="1">
+              </label>
+              <label>
+                Outdoor Light OFF Above Lux
+                <input id="outdoorLightOffAboveLuxInput" name="outdoorLightOffAboveLux" type="number" min="0" max="100000" step="1">
+              </label>
+            </div>
+
+            <div class="control-grid settings-grid">
+              <label>
+                Exhaust Fan Mode
+                <select id="exhaustFanModeInput" name="exhaustFanMode">
+                  <option value="manual">Manual</option>
+                  <option value="automatic">Automatic</option>
+                </select>
+              </label>
+              <label>
+                Exhaust Fan ON Above Temperature
+                <input id="exhaustFanOnAboveTemperatureInput" name="exhaustFanOnAboveTemperature" type="number" min="-40" max="100" step="0.5">
+              </label>
+              <label>
+                Exhaust Fan OFF Below Temperature
+                <input id="exhaustFanOffBelowTemperatureInput" name="exhaustFanOffBelowTemperature" type="number" min="-40" max="100" step="0.5">
+              </label>
+            </div>
+
+            <div class="control-grid settings-grid">
+              <label>
+                Motion Light 1 Mode
+                <select id="motionLight1ModeInput" name="motionLight1Mode">
+                  <option value="manual">Manual</option>
+                  <option value="automatic">Automatic</option>
+                </select>
+              </label>
+              <label>
+                PIR Motion Light 1 Duration
+                <input id="motionLight1DurationMsInput" name="motionLight1DurationMs" type="number" min="1000" max="3600000" step="1000">
+              </label>
+            </div>
+
+            <div class="control-grid settings-grid">
+              <label>
+                Motion Light 2 Mode
+                <select id="motionLight2ModeInput" name="motionLight2Mode">
+                  <option value="manual">Manual</option>
+                  <option value="automatic">Automatic</option>
+                </select>
+              </label>
+              <label>
+                PIR Motion Light 2 Duration
+                <input id="motionLight2DurationMsInput" name="motionLight2DurationMs" type="number" min="1000" max="3600000" step="1000">
+              </label>
+            </div>
+            </section>
+
+            <section class="settings-subpanel" data-settings-panel="network">
+              <div class="settings-section settings-heading">
+                <div>
+                  <p class="eyebrow">Network</p>
+                  <h2>WiFi and mDNS</h2>
+                </div>
+              </div>
+
+              <div class="control-grid settings-grid">
+                <label>
+                  WiFi SSID
+                  <input id="wifiSsidInput" name="wifiSsid" type="text" autocomplete="off">
+                </label>
+                <label>
+                  WiFi Password
+                  <input id="wifiPasswordInput" name="wifiPassword" type="password" autocomplete="new-password" placeholder="Leave unchanged">
+                </label>
+                <label>
+                  mDNS Hostname
+                  <input id="mdnsHostnameInput" name="mdnsHostname" type="text" autocomplete="off">
+                </label>
+              </div>
+
+              <label class="toggle-row">
+                <span>
+                  Enable OTA Updates
+                  <small>Allow firmware updates over the network after restart.</small>
+                </span>
+                <input id="otaEnabledInput" name="otaEnabled" type="checkbox">
+              </label>
+
+              <p class="settings-note">Saved network changes take effect after controller restart.</p>
+            </section>
+
+            <section class="settings-subpanel" data-settings-panel="security">
+              <div class="settings-section settings-heading">
+                <div>
+                  <p class="eyebrow">Security</p>
+                  <h2>Login Authentication</h2>
+                </div>
+              </div>
+
+              <label class="toggle-row">
+                <span>
+                  Enable Login Authentication
+                  <small>Require users to login before opening the web dashboard.</small>
+                </span>
+                <input id="loginAuthEnabledInput" name="loginAuthEnabled" type="checkbox">
+              </label>
+
+              <div class="control-grid settings-grid">
+                <label>
+                  Username
+                  <input id="loginUsernameInput" name="loginUsername" type="text" autocomplete="username">
+                </label>
+                <label>
+                  Password
+                  <input id="loginPasswordInput" name="loginPassword" type="password" autocomplete="new-password" placeholder="Leave unchanged">
+                </label>
+              </div>
+
+              <p class="settings-note">At least one user is required when login authentication is enabled. Login cookies expire after one year.</p>
+            </section>
+
+            <section class="settings-subpanel" data-settings-panel="logs">
+              <div class="settings-section settings-heading">
+                <div>
+                  <p class="eyebrow">Logs</p>
+                  <h2>Logging Settings</h2>
+                </div>
+                <button class="secondary-action" id="loadLogsButton" type="button">Load Logs</button>
+              </div>
+
+              <div class="settings-grid compact">
+                <label class="settings-switch">
+                  <span>RFID logs</span>
+                  <input id="logRfidEnabledInput" name="logRfidEnabled" type="checkbox">
+                </label>
+                <label class="settings-switch">
+                  <span>FM225 logs</span>
+                  <input id="logFm225EnabledInput" name="logFm225Enabled" type="checkbox">
+                </label>
+                <label class="settings-switch">
+                  <span>Door reed sensor logs</span>
+                  <input id="logDoorReedEnabledInput" name="logDoorReedEnabled" type="checkbox">
+                </label>
+                <label class="settings-switch">
+                  <span>Garage reed sensor logs</span>
+                  <input id="logGarageReedEnabledInput" name="logGarageReedEnabled" type="checkbox">
+                </label>
+                <label class="settings-switch">
+                  <span>Door unlock logs</span>
+                  <input id="logDoorUnlockEnabledInput" name="logDoorUnlockEnabled" type="checkbox">
+                </label>
+                <label class="settings-switch">
+                  <span>Garage unlock logs</span>
+                  <input id="logGarageUnlockEnabledInput" name="logGarageUnlockEnabled" type="checkbox">
+                </label>
+              </div>
+
+              <p class="settings-note">Enabled entries are saved in Winbond storage and retained for 30 days. Logs are displayed only after loading.</p>
+              <div class="logs-list" id="logsList">Logs not loaded.</div>
+            </section>
+
+            <div class="settings-save-row">
+              <span id="settingsMessage" class="save-state">Ready</span>
+              <button class="primary-action" type="submit">Save settings</button>
+            </div>
+          </form>
+        </section>
+
+        <section class="tab-panel" id="radarPanel">
+          <div class="radar-grid">
+            <article class="metric-card accent">
+              <div class="card-meta">
+                <span>HLK-LD2410B</span>
+                <strong id="radarState">Waiting</strong>
+              </div>
+              <p id="radarStatus">UART on RX GPIO40, TX GPIO41</p>
+            </article>
+
+            <article class="metric-card">
+              <div class="card-meta">
+                <span>Presence</span>
+                <strong id="radarPresence">--</strong>
+              </div>
+              <p id="radarTargetSummary">No radar data yet</p>
+            </article>
+
+            <article class="metric-card">
+              <div class="card-meta">
+                <span>Moving Target</span>
+                <strong id="radarMovingDistance">-- cm</strong>
+              </div>
+              <p id="radarMovingEnergy">Energy --</p>
+            </article>
+
+            <article class="metric-card">
+              <div class="card-meta">
+                <span>Stationary Target</span>
+                <strong id="radarStationaryDistance">-- cm</strong>
+              </div>
+              <p id="radarStationaryEnergy">Energy --</p>
+            </article>
+
+            <article class="metric-card wide">
+              <div class="card-meta">
+                <span>Detection Summary</span>
+                <strong id="radarDetectionDistance">-- cm</strong>
+              </div>
+              <div class="health-grid">
+                <div>
+                  <span>Moving</span>
+                  <strong id="radarMovingState">--</strong>
+                </div>
+                <div>
+                  <span>Stationary</span>
+                  <strong id="radarStationaryState">--</strong>
+                </div>
+                <div>
+                  <span>Engineering</span>
+                  <strong id="radarEngineeringMode">--</strong>
+                </div>
+                <div>
+                  <span>Last Update</span>
+                  <strong id="radarLastUpdate">--</strong>
+                </div>
+              </div>
+            </article>
+          </div>
+        </section>
+
+        <section class="tab-panel" id="fm225Panel">
+          <div class="module-grid">
+            <article class="metric-card accent">
+              <div class="card-meta">
+                <span>HLK-FM225</span>
+                <strong id="fm225State">UART Ready</strong>
+              </div>
+              <p id="fm225Status">RX GPIO38, TX GPIO37</p>
+              <div class="button-row">
+                <button class="icon-action fm225-action" data-action="open" type="button">Wake</button>
+                <button class="icon-action fm225-action" data-action="status" type="button">Status</button>
+                <button class="icon-action fm225-action" data-action="version" type="button">Version</button>
+                <button class="icon-action fm225-action" data-action="serial" type="button">Serial</button>
+              </div>
+            </article>
+
+            <article class="metric-card">
+              <div class="card-meta">
+                <span>Verification</span>
+                <strong id="fm225Recognized">--</strong>
+              </div>
+              <p id="fm225VerifyStatus">No verification result</p>
+              <div class="compact-form">
+                <label>
+                  Timeout seconds
+                  <input id="fm225VerifyTimeout" type="number" min="1" max="60" value="10">
+                </label>
+                <button class="primary-action fm225-action" data-action="verify" type="button">Verify Face</button>
+                <button class="icon-action fm225-action" data-action="cancel" type="button">Cancel</button>
+              </div>
+            </article>
+
+            <article class="metric-card">
+              <div class="card-meta">
+                <span>Face State</span>
+                <strong id="fm225FaceState">--</strong>
+              </div>
+              <p id="fm225FaceVerifyResult">Verification not started</p>
+              <p id="fm225FacePose">Yaw --, pitch --, roll --</p>
+            </article>
+
+            <article class="metric-card wide">
+              <div class="card-meta">
+                <span>Enrolled Users</span>
+                <strong id="fm225UserCount">--</strong>
+              </div>
+              <div class="button-row">
+                <button class="primary-action fm225-action" data-action="list-users" type="button">List Users</button>
+              </div>
+              <div class="tag-table-wrap">
+                <table class="tag-table">
+                  <thead>
+                    <tr>
+                      <th>#</th>
+                      <th>User ID</th>
+                      <th>Name</th>
+                      <th>Action</th>
+                    </tr>
+                  </thead>
+                  <tbody id="fm225UserTableBody">
+                    <tr>
+                      <td colspan="4">No users loaded</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </article>
+
+            <article class="metric-card wide">
+              <div class="card-meta">
+                <span>Enrollment</span>
+                <strong id="fm225EnrollState">Ready</strong>
+              </div>
+              <div class="control-grid">
+                <label>
+                  Name
+                  <input id="fm225EnrollName" type="text" maxlength="31" value="User" autocomplete="off">
+                </label>
+                <label>
+                  Direction
+                  <select id="fm225EnrollDirection">
+                    <option value="16">Middle</option>
+                    <option value="1">Up</option>
+                    <option value="2">Down</option>
+                    <option value="4">Left</option>
+                    <option value="8">Right</option>
+                    <option value="31">All directions</option>
+                  </select>
+                </label>
+                <label>
+                  Timeout
+                  <input id="fm225EnrollTimeout" type="number" min="1" max="60" value="15">
+                </label>
+                <label class="toggle-row compact-toggle">
+                  <span>Admin</span>
+                  <input id="fm225EnrollAdmin" type="checkbox">
+                </label>
+              </div>
+              <div class="button-row">
+                <button class="primary-action fm225-action" data-action="enroll-dynamic" type="button">Dynamic</button>
+                <button class="icon-action fm225-action" data-action="enroll-single" type="button">Single</button>
+                <button class="icon-action fm225-action" data-action="enroll-directional" type="button">Directional</button>
+                <button class="icon-action fm225-action" data-action="enroll-integrated" type="button">Integrated</button>
+              </div>
+            </article>
+          </div>
+        </section>
+
+        <section class="tab-panel" id="rfidPanel">
+          <div class="module-grid">
+            <article class="metric-card accent">
+              <div class="card-meta">
+                <span>RDM6300 RFID</span>
+                <strong id="rfidState">Waiting</strong>
+              </div>
+              <p id="rfidStatus">RX GPIO17, 9600 baud</p>
+            </article>
+
+            <article class="metric-card">
+              <div class="card-meta">
+                <span>Last Tag</span>
+                <strong id="rfidLastTag">--</strong>
+              </div>
+              <p id="rfidLastEvent">No tag scanned</p>
+            </article>
+
+            <article class="metric-card">
+              <div class="card-meta">
+                <span>Authorized Tags</span>
+                <strong id="rfidTagCount">0</strong>
+              </div>
+              <p id="rfidReadCount">Reads 0</p>
+            </article>
+
+            <article class="metric-card wide">
+              <div class="card-meta">
+                <span>Tag Management</span>
+                <strong id="rfidActionState">Ready</strong>
+              </div>
+              <div class="button-row rfid-management-actions">
+                <button class="primary-action rfid-action" data-action="start-add" id="rfidAddTagButton" type="button">Add Tag</button>
+                <button class="primary-action rfid-action hidden" data-action="save-pending" id="rfidSaveTagsButton" type="button">Save Tags</button>
+                <button class="icon-action rfid-action hidden" data-action="cancel-add" id="rfidCancelAddButton" type="button">Cancel</button>
+              </div>
+              <div class="pending-tags hidden" id="rfidPendingPanel">
+                <p id="rfidAddModeMessage">Scan RFID tags to add</p>
+                <div class="tag-list" id="rfidPendingTagList">No pending tags</div>
+              </div>
+              <div class="tag-table-wrap">
+                <table class="tag-table">
+                  <thead>
+                    <tr>
+                      <th>#</th>
+                      <th>Tag ID</th>
+                      <th>Added</th>
+                      <th>Action</th>
+                    </tr>
+                  </thead>
+                  <tbody id="rfidTagTableBody">
+                    <tr>
+                      <td colspan="4">No authorized tags</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </article>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <script src="/app.js" defer></script>
+  </body>
+</html>
